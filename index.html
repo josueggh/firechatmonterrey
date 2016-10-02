@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chat de Monterrey</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    img{
+      width:20px;
+      height:20px;
+      border-radius:50%;
+    }
+  </style>
+
+  <script src="https://www.gstatic.com/firebasejs/3.4.1/firebase.js"></script>
+  <script>
+    // Initialize Firebase
+    var config = {
+      apiKey: "AIzaSyC3GuuEM3uuoAe4QfYQb-VLD49E6M77ETc",
+      authDomain: "chatmonterrey-3b821.firebaseapp.com",
+      databaseURL: "https://chatmonterrey-3b821.firebaseio.com",
+      storageBucket: "chatmonterrey-3b821.appspot.com",
+      messagingSenderId: "905228797880"
+    };
+    firebase.initializeApp(config);
+  </script>
+
+
+</head>
+<body ng-app="chatmonterrey">
+<login></login>
+<chat room="'angular'"></chat>
+<chat room="'firebase'"></chat>
+<chat room="'javascript'"></chat>
+<chat room="'c'"></chat>
+
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.8/angular.min.js"></script>
+<script src="https://cdn.firebase.com/libs/angularfire/2.0.2/angularfire.min.js"></script>
+
+
+<script>
+
+  var login = {
+    template : `
+      <button ng-if="!$ctrl.auth.user" ng-click="$ctrl.login()">Login</button>
+      <button ng-if="$ctrl.auth.user" ng-click="$ctrl.logout()">Logout</button>
+    `,
+    controller : loginCtrl
+  }
+
+  var chat = {
+    template : `
+      <section ng-if="$ctrl.auth.user">
+        <h2>{{$ctrl.room}}</h2>
+        <input type="text" ng-model="$ctrl.message">
+        <button ng-click="$ctrl.sendMessage()">Enviar mensaje</button>
+
+        <div ng-repeat="message in $ctrl.messages">
+          <img ng-src="{{message.picture}}" >
+          <strong>{{message.user}}: </strong> {{message.message}}
+        </div>
+      </section>
+    `,
+    bindings: {
+      room : '='
+    },
+    controller : chatCtrl
+  };
+
+  function loginCtrl(auth){
+    this.auth = auth;
+    console.log(this.auth);
+  }
+
+  function chatCtrl($firebaseArray,auth){
+    var ref = firebase.database().ref(this.room);
+    this.auth = auth;
+    this.user = this.auth.user;
+    console.log(this.user);
+    this.auth.auth.$onAuthStateChanged(function(user){
+      if(user) {
+        this.messages = $firebaseArray(ref);
+      }
+    }.bind(this));
+
+    this.sendMessage = function(){
+
+      this.messages.$add({
+        message: this.message,
+        user : this.auth.user.name,
+        picture : this.auth.user.picture
+      } );
+      this.message = "";
+    }
+
+    this.login = function(){
+      this.auth.$signInWithPopup('google').then(
+        function(user){
+            console.log(user);
+        }
+      )
+    }
+
+    this.logout = function(){
+      this.auth.$signOut();
+    }
+  }
+
+  function auth($firebaseAuth){
+    this.auth = $firebaseAuth();
+    this.user = null;
+    this.auth.$onAuthStateChanged( function(user){
+      if(user){
+        this.user = {
+          name : user.displayName,
+          picture : user.photoURL
+        }
+      }
+    }.bind(this));
+  }
+
+
+  angular
+      .module('chatmonterrey',["firebase"])
+      .component("chat", chat)
+      .component("login", login)
+      .service("auth",auth)
+  ;
+
+</script>
+
+</body>
+</html>
